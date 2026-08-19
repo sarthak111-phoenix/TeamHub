@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #0a0908;
+    --color-surface: #12100e;
+    --color-card: #181512;
+    --color-border: #2e261f;
+    --color-text: #fdfbf7;
+    --color-text-muted: #a1988e;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbar for PS Phoenix Dark Fiery Gold Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0908;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2e261f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b;
+}
+
+/* Metallic Utility Effects */
+.glass-metallic {
+  background: rgba(18, 16, 14, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.metallic-card {
+  background: linear-gradient(135deg, rgba(24, 21, 18, 0.92) 0%, rgba(18, 16, 14, 0.96) 100%);
+  border: 1px solid rgba(46, 38, 31, 0.9);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+}
+
+.metallic-card:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 4px 25px -4px rgba(245, 158, 11, 0.25), 0 0 10px -2px rgba(234, 88, 12, 0.2), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+}
+
+.metallic-badge-admin {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.3) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.metallic-badge-member {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.18) 0%, rgba(180, 83, 9, 0.28) 100%);
+  border: 1px solid rgba(234, 88, 12, 0.45);
+  color: #f97316;
+}
+
+/* Shimmer Loading Skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #181512 25%, #2e261f 50%, #181512 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
