@@ -25,79 +25,99 @@ export default async function DashboardPage() {
 
   const now = new Date();
 
-  // Execute database queries in parallel
-  const [
-    myAssignedPendingCount,
-    teamPendingCount,
-    activeProjectsCount,
-    completedTasksCount,
-    urgentTasksCount,
-    overdueTasksCount,
-    myAssignedTasks,
-    teamPendingTasks,
-    activeProjects,
-    recentlyCompletedWork,
-    recentActivities,
-  ] = await Promise.all([
-    // 1. My assigned pending count
-    db.task.count({ where: { assigneeId: userId, status: { not: "COMPLETED" } } }),
-    // 2. Team pending count
-    db.task.count({ where: { status: { not: "COMPLETED" } } }),
-    // 3. Active projects count
-    db.project.count({ where: { status: "ACTIVE" } }),
-    // 4. Completed tasks count
-    db.task.count({ where: { status: "COMPLETED" } }),
-    // 5. Urgent tasks count
-    db.task.count({ where: { priority: "URGENT", status: { not: "COMPLETED" } } }),
-    // 6. Overdue tasks count
-    db.task.count({ where: { dueDate: { lt: now }, status: { not: "COMPLETED" } } }),
-    // 7. My assigned tasks (prioritized by overdue & urgent)
-    db.task.findMany({
-      where: { assigneeId: userId, status: { not: "COMPLETED" } },
-      take: 5,
-      orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { updatedAt: "desc" }],
-      include: { project: { select: { name: true } } },
-    }),
-    // 8. Team pending tasks overview
-    db.task.findMany({
-      where: { status: { not: "COMPLETED" } },
-      take: 5,
-      orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
-      include: {
-        assignee: { select: { name: true, avatarUrl: true } },
-        project: { select: { name: true } },
-      },
-    }),
-    // 9. Active projects with real task counts for progress calculation
-    db.project.findMany({
-      where: { status: "ACTIVE" },
-      take: 4,
-      orderBy: { updatedAt: "desc" },
-      include: {
-        owner: { select: { name: true } },
-        tasks: { select: { id: true, status: true } },
-        _count: { select: { members: true } },
-      },
-    }),
-    // 10. Recently completed tasks
-    db.task.findMany({
-      where: { status: "COMPLETED" },
-      take: 4,
-      orderBy: { completedAt: "desc" },
-      include: {
-        assignee: { select: { name: true } },
-        project: { select: { name: true } },
-      },
-    }),
-    // 11. Recent activity logs
-    db.activity.findMany({
-      take: 6,
-      orderBy: { createdAt: "desc" },
-      include: {
-        actor: { select: { name: true, role: true } },
-      },
-    }),
-  ]);
+  // Execute database queries safely with fallbacks
+  let myAssignedPendingCount = 0;
+  let teamPendingCount = 0;
+  let activeProjectsCount = 0;
+  let completedTasksCount = 0;
+  let urgentTasksCount = 0;
+  let overdueTasksCount = 0;
+  let myAssignedTasks: any[] = [];
+  let teamPendingTasks: any[] = [];
+  let activeProjects: any[] = [];
+  let recentlyCompletedWork: any[] = [];
+  let recentActivities: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      // 1. My assigned pending count
+      userId ? db.task.count({ where: { assigneeId: userId, status: { not: "COMPLETED" } } }) : 0,
+      // 2. Team pending count
+      db.task.count({ where: { status: { not: "COMPLETED" } } }),
+      // 3. Active projects count
+      db.project.count({ where: { status: "ACTIVE" } }),
+      // 4. Completed tasks count
+      db.task.count({ where: { status: "COMPLETED" } }),
+      // 5. Urgent tasks count
+      db.task.count({ where: { priority: "URGENT", status: { not: "COMPLETED" } } }),
+      // 6. Overdue tasks count
+      db.task.count({ where: { dueDate: { lt: now }, status: { not: "COMPLETED" } } }),
+      // 7. My assigned tasks (prioritized by overdue & urgent)
+      userId
+        ? db.task.findMany({
+            where: { assigneeId: userId, status: { not: "COMPLETED" } },
+            take: 5,
+            orderBy: [{ priority: "desc" }, { dueDate: "asc" }, { updatedAt: "desc" }],
+            include: { project: { select: { name: true } } },
+          })
+        : [],
+      // 8. Team pending tasks overview
+      db.task.findMany({
+        where: { status: { not: "COMPLETED" } },
+        take: 5,
+        orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
+        include: {
+          assignee: { select: { name: true, avatarUrl: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      // 9. Active projects with real task counts for progress calculation
+      db.project.findMany({
+        where: { status: "ACTIVE" },
+        take: 4,
+        orderBy: { updatedAt: "desc" },
+        include: {
+          owner: { select: { name: true } },
+          tasks: { select: { id: true, status: true } },
+          _count: { select: { members: true } },
+        },
+      }),
+      // 10. Recently completed tasks
+      db.task.findMany({
+        where: { status: "COMPLETED" },
+        take: 4,
+        orderBy: { completedAt: "desc" },
+        include: {
+          assignee: { select: { name: true } },
+          project: { select: { name: true } },
+        },
+      }),
+      // 11. Recent activity logs
+      db.activity.findMany({
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        include: {
+          actor: { select: { name: true, role: true } },
+        },
+      }),
+    ]);
+
+    [
+      myAssignedPendingCount,
+      teamPendingCount,
+      activeProjectsCount,
+      completedTasksCount,
+      urgentTasksCount,
+      overdueTasksCount,
+      myAssignedTasks,
+      teamPendingTasks,
+      activeProjects,
+      recentlyCompletedWork,
+      recentActivities,
+    ] = results as any;
+  } catch (error) {
+    console.error("[DashboardPage] Database query error:", error);
+  }
 
   return (
     <div className="space-y-8 text-xs">
@@ -259,9 +279,9 @@ export default async function DashboardPage() {
             <CardContent>
               {activeProjects.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {activeProjects.map((p) => {
-                    const total = p.tasks.length;
-                    const completed = p.tasks.filter((t) => t.status === "COMPLETED").length;
+                  {activeProjects.map((p: any) => {
+                    const total = p.tasks?.length || 0;
+                    const completed = p.tasks?.filter((t: any) => t.status === "COMPLETED").length || 0;
                     const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
                     return (
