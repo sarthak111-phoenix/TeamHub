@@ -6,40 +6,48 @@ import { Role } from "@/types";
  * Returns the currently authenticated user from DB, creating a fallback DB record if missing.
  */
 export async function getCurrentUser() {
-  const { userId } = await auth();
-  if (!userId) return null;
+  try {
+    const { userId } = await auth();
+    if (!userId) return null;
 
-  let dbUser = await db.user.findUnique({
-    where: { clerkId: userId },
-  });
-
-  if (!dbUser) {
-    const clerkUser = await getClerkUser();
-    if (!clerkUser) return null;
-
-    const primaryEmail =
-      clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress || "";
-
-    const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Team Member";
-    
-    // First registered user becomes ADMIN by default, subsequent users are MEMBERs
-    const userCount = await db.user.count();
-    const assignedRole: Role = userCount === 0 ? "ADMIN" : "MEMBER";
-
-    dbUser = await db.user.create({
-      data: {
-        clerkId: userId,
-        email: primaryEmail,
-        name,
-        avatarUrl: clerkUser.imageUrl,
-        role: assignedRole,
-      },
+    let dbUser = await db.user.findUnique({
+      where: { clerkId: userId },
     });
-  }
 
-  return dbUser;
+    if (!dbUser) {
+      const clerkUser = await getClerkUser();
+      if (!clerkUser) return null;
+
+      const primaryEmail =
+        clerkUser.emailAddresses.find(
+          (e) => e.id === clerkUser.primaryEmailAddressId
+        )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress || "";
+
+      const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || clerkUser.username || "Team Member";
+      
+      // First registered user becomes ADMIN by default, subsequent users are MEMBERs
+      const userCount = await db.user.count();
+      const assignedRole: Role = userCount === 0 ? "ADMIN" : "MEMBER";
+
+      dbUser = await db.user.create({
+        data: {
+          clerkId: userId,
+          email: primaryEmail,
+          name,
+          avatarUrl: clerkUser.imageUrl,
+          role: assignedRole,
+        },
+      });
+    }
+
+    return dbUser;
+  } catch (error: any) {
+    if (error?.digest === "DYNAMIC_SERVER_USAGE" || error?.message?.includes("DYNAMIC_SERVER_USAGE") || error?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw error;
+    }
+    console.error("[getCurrentUser] Error fetching user:", error);
+    return null;
+  }
 }
 
 /**
